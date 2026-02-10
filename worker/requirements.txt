@@ -1,0 +1,4 @@
+seestarpy
+requests
+python-dotenv
+Pillow
