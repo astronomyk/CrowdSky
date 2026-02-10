@@ -1,0 +1,27 @@
+# Credentials
+web/config.php
+worker/.env
+
+# PHP
+vendor/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+nul
+
+# Temp
+*.tmp
+*.log
