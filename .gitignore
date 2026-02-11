@@ -4,6 +4,7 @@ worker/.env
 
 # PHP
 vendor/
+web/uploads/
 
 # Python
 __pycache__/

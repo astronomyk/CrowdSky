@@ -18,6 +18,10 @@ define('UCLOUD_BASE_PATH', '/crowdsky');
 // Worker API
 define('WORKER_API_KEY', 'CHANGE_ME_GENERATE_A_RANDOM_64_CHAR_STRING');
 
+// Local raw file storage (webspace disk, temporary until stacking completes)
+define('UPLOAD_DIR', __DIR__ . '/uploads');  // 50 GB webspace buffer
+define('UPLOAD_EXPIRY_HOURS', 24);           // auto-cleanup after this many hours
+
 // Upload limits
 define('MAX_FILE_SIZE', 50 * 1024 * 1024); // 50 MB
 define('ALLOWED_EXTENSIONS', ['fit', 'fits']);

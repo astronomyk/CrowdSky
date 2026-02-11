@@ -60,3 +60,24 @@ def fail_job(job_id: int, error_message: str) -> dict:
     )
     resp.raise_for_status()
     return resp.json()
+
+
+def download_raw_file(file_id: int, local_path: "Path") -> None:
+    """Download a raw FITS file from the PHP webspace via API."""
+    from pathlib import Path
+
+    local_path = Path(local_path)
+    local_path.parent.mkdir(parents=True, exist_ok=True)
+
+    resp = requests.get(
+        f"{config.API_BASE_URL}/download_raw.php",
+        headers=_headers(),
+        params={"file_id": file_id},
+        stream=True,
+        timeout=300,
+    )
+    resp.raise_for_status()
+
+    with open(local_path, "wb") as f:
+        for chunk in resp.iter_content(chunk_size=65536):
+            f.write(chunk)

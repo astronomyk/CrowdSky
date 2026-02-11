@@ -1,16 +1,18 @@
 <?php
 /**
- * Upload page: drag-and-drop .fit files, stream to u:cloud, parse FITS headers.
+ * Upload page: drag-and-drop .fit files, save to local webspace disk, parse FITS headers.
+ *
+ * Raw files are stored locally on the webspace (50 GB buffer). Only stacked
+ * results go to u:cloud. The worker downloads raws via /api/download_raw.php.
  *
  * GET           — render upload form
- * POST action=start — create upload_session + u:cloud directory
- * POST action=file  — receive one .fit file, stream to u:cloud, insert raw_files row
+ * POST action=start — create upload_session + local directory
+ * POST action=file  — receive one .fit file, save to disk, insert raw_files row
  */
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/fits_utils.php';
-require_once __DIR__ . '/webdav.php';
 
 $userId = requireLogin();
 
@@ -29,19 +31,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'start') {
 
     $db = getDb();
     $sessionToken = bin2hex(random_bytes(16));
-    $ucloudPath = UCLOUD_BASE_PATH . "/raws/user_{$userId}/sess_{$sessionToken}";
+    $localDir = UPLOAD_DIR . "/user_{$userId}/sess_{$sessionToken}";
 
-    // Create directory on u:cloud
-    if (!mkcolUcloud($ucloudPath)) {
-        http_response_code(502);
-        echo json_encode(['error' => 'Failed to create u:cloud directory.']);
+    // Create local directory on webspace
+    if (!mkdir($localDir, 0750, true)) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to create upload directory.']);
         exit;
     }
 
     $stmt = $db->prepare(
         'INSERT INTO upload_sessions (user_id, session_token, ucloud_path) VALUES (?, ?, ?)'
     );
-    $stmt->execute([$userId, $sessionToken, $ucloudPath]);
+    $stmt->execute([$userId, $sessionToken, $localDir]);
     $sessionId = (int)$db->lastInsertId();
 
     echo json_encode([
@@ -118,11 +120,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'file') {
         $chunkKey = computeChunkKey($header['DATE-OBS'], $ra, $dec);
     }
 
-    // Upload to u:cloud
-    $remotePath = $session['ucloud_path'] . '/' . $filename;
-    if (!uploadToUcloud($tmpPath, $remotePath)) {
-        http_response_code(502);
-        echo json_encode(['error' => 'Failed to upload to u:cloud.']);
+    // Save to local webspace disk
+    $localPath = $session['ucloud_path'] . '/' . $filename;
+    if (!move_uploaded_file($tmpPath, $localPath)) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to save file to disk.']);
         exit;
     }
 
@@ -145,7 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'file') {
     $stmt->execute([
         $session['id'],
         $filename,
-        $remotePath,
+        $localPath,
         $fileSize,
         $dateObs,
         $header['OBJECT'] ?? null,

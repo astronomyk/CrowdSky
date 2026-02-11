@@ -1,5 +1,9 @@
 """
-Main job processing logic: download raws, stack, upload result, clean up.
+Main job processing logic: download raws from webspace, stack, upload result to u:cloud.
+
+Raws live on the PHP webspace (50 GB local disk). The worker downloads them via
+/api/download_raw.php, stacks, and uploads the result to u:cloud (250 GB permanent
+storage). The PHP side handles deleting local raws when complete_job is called.
 """
 
 import logging
@@ -7,8 +11,8 @@ import shutil
 from pathlib import Path
 
 from . import config
-from .api_client import get_job_files, complete_job, fail_job
-from .webdav import download_file, upload_file, mkcol, delete_files
+from .api_client import get_job_files, complete_job, fail_job, download_raw_file
+from .webdav import upload_file, mkcol
 from .stacking_adapter import stack_files
 from .thumbnail import generate_thumbnail
 
@@ -20,11 +24,10 @@ def process_job(job: dict) -> None:
     Process a single stacking job end-to-end.
 
     1. Fetch file list from API
-    2. Download raw FITS from u:cloud
+    2. Download raw FITS from PHP webspace via API
     3. Stack with seestarpy
     4. Upload stacked FITS + thumbnail to u:cloud
-    5. Report completion to API
-    6. Delete raw files from u:cloud
+    5. Report completion to API (PHP deletes local raws)
     """
     job_id = job["job_id"]
     user_id = job["user_id"]
@@ -45,15 +48,13 @@ def process_job(job: dict) -> None:
             fail_job(job_id, "No raw files found for this job.")
             return
 
-        # 2. Download raws
-        logger.info(f"Job {job_id}: downloading {len(files)} raw files")
+        # 2. Download raws from PHP webspace
+        logger.info(f"Job {job_id}: downloading {len(files)} raw files from webspace")
         local_paths = []
-        remote_paths = []
         for f in files:
             local_path = raws_dir / f["filename"]
-            download_file(f["ucloud_path"], local_path)
+            download_raw_file(int(f["id"]), local_path)
             local_paths.append(local_path)
-            remote_paths.append(f["ucloud_path"])
 
         # 3. Stack
         logger.info(f"Job {job_id}: stacking {len(local_paths)} frames")
@@ -68,13 +69,13 @@ def process_job(job: dict) -> None:
             logger.warning(f"Job {job_id}: thumbnail generation failed: {e}")
             thumb_output = None
 
-        # 5. Upload to u:cloud
+        # 5. Upload stacked result to u:cloud (permanent storage)
         safe_object = object_name.replace("/", "_").replace(" ", "_")
         stack_remote_dir = f"{config.UCLOUD_BASE_PATH}/stacks/user_{user_id}/{safe_object}"
         mkcol(stack_remote_dir)
 
         stack_remote_path = f"{stack_remote_dir}/stack_{chunk_key}_{job_id}.fits"
-        logger.info(f"Job {job_id}: uploading stack to {stack_remote_path}")
+        logger.info(f"Job {job_id}: uploading stack to u:cloud {stack_remote_path}")
         upload_file(stack_output, stack_remote_path)
 
         thumb_remote_path = None
@@ -82,7 +83,7 @@ def process_job(job: dict) -> None:
             thumb_remote_path = f"{stack_remote_dir}/stack_{chunk_key}_{job_id}_thumb.png"
             upload_file(thumb_output, thumb_remote_path)
 
-        # 6. Report completion
+        # 6. Report completion (PHP will delete local raws from webspace)
         metadata = {
             "ucloud_path": stack_remote_path,
             "thumbnail_path": thumb_remote_path,
@@ -95,14 +96,9 @@ def process_job(job: dict) -> None:
             "dec_deg": result.dec_deg,
             "file_size_bytes": stack_output.stat().st_size,
             "n_stars_detected": result.n_stars_detected,
-            "raws_deleted": True,
         }
         complete_job(job_id, metadata)
         logger.info(f"Job {job_id}: completed ({result.n_aligned}/{result.n_frames_input} aligned)")
-
-        # 7. Delete raws from u:cloud
-        logger.info(f"Job {job_id}: cleaning up {len(remote_paths)} raw files")
-        delete_files(remote_paths)
 
     except Exception as e:
         logger.error(f"Job {job_id}: failed — {e}", exc_info=True)

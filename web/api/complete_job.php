@@ -91,12 +91,40 @@ try {
         'UPDATE stacking_jobs SET status = ?, completed_at = NOW() WHERE id = ?'
     )->execute(['completed', $jobId]);
 
-    // Mark raw files as deleted (worker should have removed them from u:cloud)
-    if (!empty($input['raws_deleted'])) {
-        $db->prepare(
-            'UPDATE raw_files SET is_deleted = 1
-             WHERE upload_session_id = ? AND chunk_key = ?'
-        )->execute([$job['upload_session_id'], $job['chunk_key']]);
+    // Delete local raw files from webspace disk and mark as deleted in DB
+    $rawStmt = $db->prepare(
+        'SELECT id, ucloud_path FROM raw_files
+         WHERE upload_session_id = ? AND chunk_key = ? AND is_deleted = 0'
+    );
+    $rawStmt->execute([$job['upload_session_id'], $job['chunk_key']]);
+    $rawFiles = $rawStmt->fetchAll();
+
+    foreach ($rawFiles as $raw) {
+        if (is_file($raw['ucloud_path'])) {
+            unlink($raw['ucloud_path']);
+        }
+    }
+
+    $db->prepare(
+        'UPDATE raw_files SET is_deleted = 1
+         WHERE upload_session_id = ? AND chunk_key = ?'
+    )->execute([$job['upload_session_id'], $job['chunk_key']]);
+
+    // If all chunks for this session are done, remove the session directory
+    $remaining = $db->prepare(
+        'SELECT COUNT(*) FROM raw_files
+         WHERE upload_session_id = ? AND is_deleted = 0'
+    );
+    $remaining->execute([$job['upload_session_id']]);
+    if ((int)$remaining->fetchColumn() === 0) {
+        $sessStmt = $db->prepare(
+            'SELECT ucloud_path FROM upload_sessions WHERE id = ?'
+        );
+        $sessStmt->execute([$job['upload_session_id']]);
+        $sessDir = $sessStmt->fetchColumn();
+        if ($sessDir && is_dir($sessDir)) {
+            @rmdir($sessDir); // removes empty dir
+        }
     }
 
     $db->commit();
