@@ -12,7 +12,7 @@ define('DB_PASS', 'CHANGE_ME');
 
 // u:cloud WebDAV
 define('UCLOUD_WEBDAV_URL', 'https://ucloud.univie.ac.at/public.php/webdav');
-define('UCLOUD_SHARE_TOKEN', 'CHANGE_ME');
+define('UCLOUD_SHARE_TOKEN', 'ELBci3d9eqyRBHp');
 define('UCLOUD_BASE_PATH', '/crowdsky');
 
 // Worker API
