@@ -34,6 +34,9 @@ def generate_thumbnail(
     if data.ndim == 3 and data.shape[0] == 3:
         # (3, H, W) -> (H, W, 3)
         rgb = np.transpose(data, (1, 2, 0))
+    elif data.ndim == 3 and data.shape[2] == 3:
+        # Already (H, W, 3) — seestarpy outputs this format
+        rgb = data
     elif data.ndim == 2:
         # Grayscale -> fake RGB
         rgb = np.stack([data, data, data], axis=-1)
