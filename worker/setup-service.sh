@@ -11,10 +11,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKER_DIR="$SCRIPT_DIR"
+REPO_DIR="$(dirname "$WORKER_DIR")"
 RUN_USER="${SUDO_USER:-$(whoami)}"
 VENV_PYTHON="$WORKER_DIR/.venv/bin/python"
 
 echo "=== CrowdSky Worker Service Setup ==="
+echo "Repo dir:    $REPO_DIR"
 echo "Worker dir:  $WORKER_DIR"
 echo "Run as user: $RUN_USER"
 echo "Python:      $VENV_PYTHON"
@@ -44,7 +46,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=$RUN_USER
-WorkingDirectory=$WORKER_DIR
+WorkingDirectory=$REPO_DIR
 ExecStart=$VENV_PYTHON -m worker
 Restart=always
 RestartSec=10
