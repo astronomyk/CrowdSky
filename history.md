@@ -80,3 +80,55 @@ per file) and keeps u:cloud clean as purely archival storage for finished stacks
 |---------|----------|-----------|
 | Webspace (50 GB) | Raw .fit uploads | Temporary — deleted after stacking or after 24h |
 | u:cloud (250 GB) | Stacked FITS + thumbnails | Permanent |
+
+---
+
+## 2026-02-10 — Comprehensive documentation
+
+Created `docs/` folder with 7 documents: README, architecture (with ASCII flow diagrams), deployment guide, database schema reference, PHP code reference, worker API reference, Python worker reference, and configuration reference.
+
+---
+
+## 2026-02-11 — First successful end-to-end run
+
+### Live deployment
+- Created MariaDB database via univie Webdatenbank portal
+- Imported `schema.sql` via phpMyAdmin
+- Deployed PHP app to webspace via SMB mount at `crowdsky.univie.ac.at`
+- Registered first user, uploaded 36 NGC 188 raw frames
+- Ran worker locally on laptop — all 7 stacking jobs completed (36/36 frames aligned)
+
+### Thumbnail fix
+- seestarpy outputs stacked RGB data as `(H, W, 3)` not `(3, H, W)` — added handling for both shapes in `worker/thumbnail.py`
+
+### Worker packaging with uv
+- Added `worker/pyproject.toml` for `uv sync` support
+- seestarpy pulled directly from GitHub as a dependency
+- Required `[tool.hatch.metadata] allow-direct-references = true` for hatchling to accept git URLs
+
+---
+
+## 2026-02-12 — Worker deployed to zeus server
+
+### Server setup
+Deployed the stacking worker as a systemd service on `zeus.astro.univie.ac.at` (Fedora 39, 32 cores, 256 GB RAM).
+
+- Created `crowdsky` system user at `/opt/crowdsky`
+- Cloned repo, ran `uv sync` to install dependencies
+- Created `worker/setup-service.sh` — one-step systemd service installer that auto-detects paths and user
+- Service runs as `athena` user, auto-starts on boot, auto-restarts on crash
+
+### Issues resolved during deployment
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| `status=200/CHDIR` | Service user couldn't enter repo directory | `chmod 755` on directory chain |
+| `No module named worker` | `WorkingDirectory` pointed to `worker/` instead of repo root | Set to parent directory |
+| `Permission denied: 'tmp'` | Relative `WORK_DIR=./tmp` resolved inside repo owned by different user | Changed to `/tmp/crowdsky-worker` |
+| `dubious ownership in repository` | Git repo owned by `crowdsky`, commands run as `athena` | Added to git safe.directory |
+
+### New files
+- **`worker/pyproject.toml`** — uv/pip installable package with seestarpy from GitHub
+- **`worker/crowdsky-worker.service`** — reference systemd unit file
+- **`worker/setup-service.sh`** — automated service installer
+- **`docs/server-deployment.md`** — full guide to the zeus setup
+- **`docs/faq.md`** — operations guide: stop/start/update/troubleshoot

@@ -4,22 +4,40 @@ The worker is a standalone Python application in the `worker/` directory. It run
 
 ## Installation
 
+### Using uv (recommended, especially for servers)
+
+The worker has a `pyproject.toml` that handles all dependencies:
+
+```bash
+cd CrowdSky/worker
+uv sync                    # creates .venv, installs everything including seestarpy from GitHub
+cp .env.example .env       # edit with credentials
+```
+
+### Using pip (for local development)
+
 ```bash
 cd D:\Repos\CrowdSky
-
-# Install dependencies (includes seestarpy)
-pip install -r worker/requirements.txt
-
-# Create .env from template
+pip install -e E:\WHOPA\seestarpy    # local seestarpy
+pip install requests python-dotenv Pillow
 copy worker\.env.example worker\.env
-# Edit worker\.env with your credentials
 ```
 
 ### Dependencies
-- **seestarpy** — FITS stacking library (astroalign, OpenCV, numpy, astropy, sep)
+- **seestarpy** — FITS stacking library (astroalign, OpenCV, numpy, astropy, sep). Pulled from [GitHub](https://github.com/astronomyk/seestarpy) by `uv sync`.
 - **requests** — HTTP client for the PHP API and WebDAV
 - **python-dotenv** — loads `.env` configuration
 - **Pillow** — PNG thumbnail generation
+
+### systemd service (for production servers)
+
+A `setup-service.sh` script is included for Fedora/RHEL. It auto-detects paths, writes the systemd unit file, and starts the service:
+
+```bash
+sudo bash worker/setup-service.sh
+```
+
+See [server-deployment.md](server-deployment.md) for the full zeus setup guide.
 
 ## Configuration
 

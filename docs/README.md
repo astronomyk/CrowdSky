@@ -15,6 +15,8 @@ CrowdSky is a cloud stacking service for Seestar S50 telescope users. Users uplo
 | [Worker API Reference](api-reference.md) | HTTP endpoints the Python worker calls |
 | [Python Worker Reference](worker-reference.md) | How the stacking worker works |
 | [Configuration Reference](configuration.md) | Every config value explained |
+| [Server Deployment (Zeus)](server-deployment.md) | How the worker runs on zeus.astro.univie.ac.at as a systemd service |
+| [FAQ / Operations Guide](faq.md) | How to stop, start, update, and troubleshoot the worker |
 
 ## Quick Links
 

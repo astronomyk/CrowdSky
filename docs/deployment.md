@@ -143,32 +143,39 @@ https://ucloud.univie.ac.at/public.php/webdav
 ```
 Authentication is the share token as username, empty password.
 
-## Step 7: Deploy the Python Worker (Optional for MVP)
+## Step 7: Deploy the Python Worker
 
-The worker is what actually stacks the FITS files. It can run on any machine.
+The worker is what actually stacks the FITS files. It can run on any machine. There are two options:
 
-1. On the machine where you want to run the worker:
-   ```bash
-   cd D:\Repos\CrowdSky
-   pip install -r worker/requirements.txt
-   ```
-   This installs `seestarpy`, `requests`, `python-dotenv`, and `Pillow`.
+### Option A: Local development (your laptop)
 
-2. Copy `worker/.env.example` to `worker/.env` and fill in:
-   ```
-   API_BASE_URL=https://crowdsky.univie.ac.at/api
-   WORKER_API_KEY=same-key-as-in-config-php
-   UCLOUD_SHARE_TOKEN=ELBci3d9eqyRBHp
-   ```
+```bash
+cd D:\Repos\CrowdSky
+pip install -e E:\WHOPA\seestarpy       # install seestarpy from local repo
+pip install requests python-dotenv Pillow
+copy worker\.env.example worker\.env     # edit with your credentials
+python -m worker                         # daemon mode
+```
 
-3. Run in daemon mode (continuous polling):
-   ```bash
-   python -m worker
-   ```
-   Or process one job and exit (for cron):
-   ```bash
-   python -m worker --once
-   ```
+### Option B: Server deployment with uv (recommended for production)
+
+The worker has a `pyproject.toml` that handles all dependencies including seestarpy (pulled from GitHub).
+
+```bash
+git clone https://github.com/astronomyk/CrowdSky.git
+cd CrowdSky/worker
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv sync                                  # creates .venv, installs everything
+cp .env.example .env                     # edit with your credentials
+uv run python -m worker                  # test it works
+```
+
+For running as a systemd service on Fedora/RHEL (auto-start, auto-restart):
+```bash
+sudo bash setup-service.sh               # one-step service installation
+```
+
+See [server-deployment.md](server-deployment.md) for the full guide and [faq.md](faq.md) for operations.
 
 ## Step 8: Set Up Cron Cleanup (Recommended)
 
