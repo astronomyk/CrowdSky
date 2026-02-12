@@ -1,0 +1,30 @@
+[Unit]
+Description=CrowdSky Stacking Worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=crowdsky
+Group=crowdsky
+WorkingDirectory=/opt/crowdsky/worker
+ExecStart=/opt/crowdsky/worker/.venv/bin/python -m worker
+Restart=always
+RestartSec=10
+
+# Environment
+EnvironmentFile=/opt/crowdsky/worker/.env
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crowdsky-worker
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/crowdsky/worker/tmp
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
