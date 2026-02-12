@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "crowdsky-worker"
+version = "0.1.0"
+description = "CrowdSky stacking worker"
+requires-python = ">=3.11"
+dependencies = [
+    "seestarpy @ git+https://github.com/astronomyk/seestarpy.git",
+    "requests",
+    "python-dotenv",
+    "Pillow",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
