@@ -272,3 +272,371 @@ th {
     max-width: 400px;
     margin: 2rem auto;
 }
+
+/* ===== Splash / Landing Page ===== */
+
+.splash-page .site-header {
+    background: transparent;
+    border-bottom: none;
+    position: absolute;
+    width: 100%;
+    z-index: 10;
+}
+
+.splash-hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: linear-gradient(135deg, #0d1117 0%, #161b22 40%, #0d1117 100%);
+    overflow: hidden;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 640px;
+    padding: 2rem 1.5rem;
+}
+
+.hero-title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--accent) 0%, #a371f7 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-tagline {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+}
+
+.hero-description p {
+    color: var(--text);
+    font-size: 1rem;
+    line-height: 1.7;
+    margin-bottom: 1rem;
+}
+
+.btn-lg {
+    padding: 0.75rem 2rem;
+    font-size: 1.125rem;
+    margin-top: 1rem;
+}
+
+/* CSS Starfield */
+.starfield {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+.stars {
+    position: absolute;
+    inset: 0;
+    background-repeat: repeat;
+    animation: starDrift 120s linear infinite;
+}
+
+.stars-sm {
+    background-image:
+        radial-gradient(1px 1px at 50px 80px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 150px 200px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 300px 50px, rgba(255,255,255,0.4), transparent),
+        radial-gradient(1px 1px at 450px 320px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 80px 400px, rgba(255,255,255,0.3), transparent),
+        radial-gradient(1px 1px at 520px 150px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 200px 500px, rgba(255,255,255,0.4), transparent),
+        radial-gradient(1px 1px at 600px 280px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 700px 450px, rgba(255,255,255,0.3), transparent),
+        radial-gradient(1px 1px at 350px 600px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 100px 650px, rgba(255,255,255,0.4), transparent),
+        radial-gradient(1px 1px at 750px 100px, rgba(255,255,255,0.5), transparent);
+    background-size: 800px 700px;
+    animation-duration: 180s;
+}
+
+.stars-md {
+    background-image:
+        radial-gradient(1.5px 1.5px at 120px 160px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1.5px 1.5px at 400px 90px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1.5px 1.5px at 250px 380px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1.5px 1.5px at 550px 500px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1.5px 1.5px at 50px 300px, rgba(255,255,255,0.4), transparent),
+        radial-gradient(1.5px 1.5px at 650px 200px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1.5px 1.5px at 180px 550px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1.5px 1.5px at 480px 650px, rgba(255,255,255,0.7), transparent);
+    background-size: 700px 700px;
+    animation-duration: 140s;
+}
+
+.stars-lg {
+    background-image:
+        radial-gradient(2px 2px at 200px 250px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(2px 2px at 500px 400px, rgba(255,255,255,0.9), transparent),
+        radial-gradient(2px 2px at 100px 500px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(2px 2px at 650px 100px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(2.5px 2.5px at 350px 350px, rgba(136,198,255,0.9), transparent);
+    background-size: 750px 600px;
+    animation-duration: 100s;
+    animation-name: starTwinkle;
+}
+
+@keyframes starDrift {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-700px); }
+}
+
+@keyframes starTwinkle {
+    0%, 100% { opacity: 1; transform: translateY(0); }
+    25%      { opacity: 0.7; }
+    50%      { opacity: 1; transform: translateY(-300px); }
+    75%      { opacity: 0.8; }
+}
+
+/* How-it-works steps */
+.splash-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    max-width: 900px;
+    margin: -4rem auto 4rem;
+    padding: 0 1.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.step-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+}
+
+.step-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.step-card h3 {
+    font-size: 1.125rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent);
+}
+
+.step-card p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+    .splash-steps {
+        grid-template-columns: 1fr;
+        margin-top: -2rem;
+    }
+    .hero-title {
+        font-size: 2.5rem;
+    }
+}
+
+/* ===== Button sizes ===== */
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+/* ===== Danger button ===== */
+.btn-danger {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}
+.btn-danger:hover {
+    background: #da3633;
+    border-color: #da3633;
+    color: #fff;
+}
+
+/* ===== Disabled button ===== */
+.btn-disabled,
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ===== File list scrollable container ===== */
+.file-list-container {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+.file-list-container::-webkit-scrollbar {
+    width: 8px;
+}
+.file-list-container::-webkit-scrollbar-track {
+    background: var(--bg);
+}
+.file-list-container::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+.file-list-container .file-list {
+    margin-top: 0;
+}
+
+/* ===== Upload progress row ===== */
+.upload-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.upload-progress-row .progress-bar {
+    flex: 1;
+    margin-top: 0;
+}
+
+/* ===== View toggle ===== */
+.view-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+.view-toggle button {
+    padding: 0.4rem 1rem;
+    background: var(--bg-card);
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.view-toggle button:not(:last-child) {
+    border-right: 1px solid var(--border);
+}
+.view-toggle button.active {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* ===== Sky map ===== */
+.skymap-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+.skymap-container svg {
+    width: 100%;
+    display: block;
+}
+.skymap-container .graticule {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 0.5;
+    stroke-opacity: 0.6;
+}
+.skymap-container .outline {
+    fill: none;
+    stroke: var(--text-muted);
+    stroke-width: 1;
+}
+.skymap-container .stack-dot {
+    fill: var(--danger);
+    fill-opacity: 0.8;
+    cursor: pointer;
+    transition: fill-opacity 0.15s;
+}
+.skymap-container .stack-dot:hover {
+    fill-opacity: 1;
+}
+.skymap-container .stack-dot.dimmed {
+    fill-opacity: 0.15;
+}
+.skymap-container .stack-dot.selected {
+    fill-opacity: 1;
+    stroke: #fff;
+    stroke-width: 1;
+}
+.skymap-container .tick-label {
+    fill: var(--text-muted);
+    font-size: 10px;
+}
+
+/* Timeline panel */
+.timeline-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+.timeline-container svg {
+    width: 100%;
+    display: block;
+}
+.timeline-container .timeline-dot {
+    fill: var(--danger);
+    fill-opacity: 0.8;
+}
+.timeline-container .timeline-dot.dimmed {
+    fill-opacity: 0.15;
+}
+.timeline-container .brush .selection {
+    fill: var(--accent);
+    fill-opacity: 0.2;
+    stroke: var(--accent);
+}
+
+/* Selection summary */
+.selection-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.9375rem;
+}
+.selection-summary .summary-text {
+    color: var(--text-muted);
+}
+.selection-summary .summary-text strong {
+    color: var(--text);
+}
+
+/* ===== Tooltip ===== */
+.map-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: rgba(22, 27, 34, 0.95);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--text);
+    white-space: nowrap;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.map-tooltip.visible {
+    opacity: 1;
+}

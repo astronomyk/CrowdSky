@@ -1,4 +1,6 @@
+<?php if (empty($isSplash)): ?>
 </main>
+<?php endif; ?>
 <footer class="site-footer">
     <p>CrowdSky &mdash; Cloud stacking for Seestar telescopes</p>
 </footer>

@@ -101,7 +101,7 @@ function requireLogin(): int
 {
     $uid = currentUserId();
     if ($uid === null) {
-        header('Location: index.php?msg=login_required');
+        header('Location: login.php?msg=login_required');
         exit;
     }
     return $uid;

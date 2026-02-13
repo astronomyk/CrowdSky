@@ -6,7 +6,7 @@
     <title><?= htmlspecialchars($pageTitle ?? 'CrowdSky') ?></title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body>
+<body<?= !empty($isSplash) ? ' class="splash-page"' : '' ?>>
 <header class="site-header">
     <nav>
         <a href="index.php" class="logo">CrowdSky</a>
@@ -16,11 +16,13 @@
                 <a href="status.php">Jobs</a>
                 <a href="stacks.php">Stacks</a>
                 <span class="user-info"><?= htmlspecialchars($_SESSION['username'] ?? '') ?></span>
-                <a href="index.php?action=logout">Logout</a>
+                <a href="login.php?action=logout">Logout</a>
             <?php else: ?>
-                <a href="index.php">Login</a>
+                <a href="login.php">Login</a>
             <?php endif; ?>
         </div>
     </nav>
 </header>
+<?php if (empty($isSplash)): ?>
 <main>
+<?php endif; ?>

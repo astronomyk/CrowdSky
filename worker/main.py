@@ -10,6 +10,7 @@ import argparse
 import logging
 import time
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 from . import config
 from .api_client import get_next_job
@@ -35,21 +36,50 @@ def run_once() -> bool:
 
 
 def run_daemon() -> None:
-    """Poll continuously for jobs."""
-    logger.info(f"Worker {config.WORKER_ID} starting (poll interval: {config.POLL_INTERVAL}s)")
+    """Poll continuously for jobs using a thread pool."""
+    logger.info(
+        f"Worker {config.WORKER_ID} starting "
+        f"(poll interval: {config.POLL_INTERVAL}s, max workers: {config.MAX_WORKERS})"
+    )
     config.WORK_DIR.mkdir(parents=True, exist_ok=True)
 
-    while True:
+    with ThreadPoolExecutor(max_workers=config.MAX_WORKERS) as pool:
+        futures = set()
         try:
-            found = run_once()
-            if not found:
-                time.sleep(config.POLL_INTERVAL)
+            while True:
+                # Remove completed futures
+                done = {f for f in futures if f.done()}
+                for f in done:
+                    try:
+                        f.result()
+                    except Exception as e:
+                        logger.error(f"Thread error: {e}", exc_info=True)
+                futures -= done
+
+                # If pool has capacity, try to claim a job
+                if len(futures) < config.MAX_WORKERS:
+                    job = get_next_job()
+                    if job:
+                        logger.info(f"Claimed job {job['job_id']}, submitting to thread pool")
+                        futures.add(pool.submit(process_job, job))
+                        continue  # immediately try to claim another
+                    else:
+                        logger.info("No pending jobs.")
+
+                # Sleep: briefly if threads are running, full interval if idle
+                time.sleep(config.POLL_INTERVAL if not futures else 2)
         except KeyboardInterrupt:
-            logger.info("Shutting down.")
-            break
-        except Exception as e:
-            logger.error(f"Unexpected error: {e}", exc_info=True)
-            time.sleep(config.POLL_INTERVAL)
+            logger.info("Shutting down, waiting for running jobs to finish...")
+            for f in futures:
+                f.cancel()
+            # Wait for running (non-cancelled) futures to complete
+            for f in futures:
+                if not f.cancelled():
+                    try:
+                        f.result(timeout=300)
+                    except Exception:
+                        pass
+            logger.info("Shutdown complete.")
 
 
 def main():

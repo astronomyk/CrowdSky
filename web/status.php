@@ -60,11 +60,12 @@ include __DIR__ . '/templates/header.php';
                         <th>Frames</th>
                         <th>Status</th>
                         <th>Created</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php foreach ($jobs as $job): ?>
-                    <tr>
+                    <tr id="job-row-<?= (int)$job['id'] ?>">
                         <td><?= (int)$job['id'] ?></td>
                         <td><?= htmlspecialchars($job['chunk_key']) ?></td>
                         <td><?= htmlspecialchars($job['object_name'] ?? '-') ?></td>
@@ -75,11 +76,40 @@ include __DIR__ . '/templates/header.php';
                             </span>
                         </td>
                         <td><?= htmlspecialchars($job['created_at']) ?></td>
+                        <td>
+                            <button class="btn btn-danger btn-sm"
+                                    onclick="deleteJob(<?= (int)$job['id'] ?>)">Delete</button>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
+
+        <script>
+        const csrfToken = <?= json_encode(csrfToken()) ?>;
+
+        async function deleteJob(jobId) {
+            if (!confirm('Delete this job and all its files? This cannot be undone.')) return;
+
+            try {
+                const resp = await fetch('api/delete_job.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ job_id: jobId, csrf_token: csrfToken })
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    const row = document.getElementById('job-row-' + jobId);
+                    if (row) row.remove();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Network error: ' + err.message);
+            }
+        }
+        </script>
         <?php endif; ?>
     <?php else: ?>
         <div class="alert alert-error">Session not found.</div>

@@ -6,6 +6,7 @@
  * results go to u:cloud. The worker downloads raws via /api/download_raw.php.
  *
  * GET           — render upload form
+ * GET action=status — return session state as JSON (for session persistence)
  * POST action=start — create upload_session + local directory
  * POST action=file  — receive one .fit file, save to disk, insert raw_files row
  */
@@ -17,6 +18,49 @@ require_once __DIR__ . '/fits_utils.php';
 $userId = requireLogin();
 
 $action = $_GET['action'] ?? $_POST['action'] ?? null;
+
+// --- GET: session status endpoint (for persistence) ---
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'status') {
+    header('Content-Type: application/json');
+
+    $sessionToken = $_GET['session_token'] ?? '';
+    if (empty($sessionToken)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Missing session_token.']);
+        exit;
+    }
+
+    $db = getDb();
+    $stmt = $db->prepare(
+        'SELECT id, status, file_count FROM upload_sessions WHERE session_token = ? AND user_id = ?'
+    );
+    $stmt->execute([$sessionToken, $userId]);
+    $session = $stmt->fetch();
+
+    if (!$session) {
+        echo json_encode(['status' => 'not_found']);
+        exit;
+    }
+
+    $files = [];
+    if ($session['status'] === 'uploading') {
+        $stmt = $db->prepare(
+            'SELECT filename, chunk_key, file_size_bytes FROM raw_files
+             WHERE upload_session_id = ? AND is_deleted = 0
+             ORDER BY created_at'
+        );
+        $stmt->execute([$session['id']]);
+        $files = $stmt->fetchAll();
+    }
+
+    echo json_encode([
+        'status'     => $session['status'],
+        'file_count' => (int)$session['file_count'],
+        'files'      => $files,
+    ]);
+    exit;
+}
 
 // --- API-style POST handlers (called via fetch from JS) ---
 
@@ -200,14 +244,17 @@ include __DIR__ . '/templates/header.php';
     </div>
 
     <div id="upload-progress" style="display:none">
-        <div class="progress-bar"><div class="fill" id="progress-fill" style="width:0%"></div></div>
+        <div class="upload-progress-row">
+            <button id="btn-finalize" class="btn btn-primary btn-disabled" disabled>
+                Finalize &amp; Create Stacking Jobs
+            </button>
+            <div class="progress-bar"><div class="fill" id="progress-fill" style="width:0%"></div></div>
+        </div>
         <p id="progress-text" style="margin-top:0.5rem;font-size:0.875rem;color:var(--text-muted)"></p>
     </div>
 
-    <ul class="file-list" id="file-list"></ul>
-
-    <div id="upload-actions" style="display:none;margin-top:1rem">
-        <button id="btn-finalize" class="btn btn-primary">Finalize &amp; Create Stacking Jobs</button>
+    <div class="file-list-container" id="file-list-container" style="display:none">
+        <ul class="file-list" id="file-list"></ul>
     </div>
 </div>
 
@@ -216,15 +263,100 @@ include __DIR__ . '/templates/header.php';
     const zone = document.getElementById('upload-zone');
     const input = document.getElementById('file-input');
     const list = document.getElementById('file-list');
+    const listContainer = document.getElementById('file-list-container');
     const progressWrap = document.getElementById('upload-progress');
     const progressFill = document.getElementById('progress-fill');
     const progressText = document.getElementById('progress-text');
-    const actions = document.getElementById('upload-actions');
+    const btnFinalize = document.getElementById('btn-finalize');
     const csrf = <?= json_encode(csrfToken()) ?>;
 
     let sessionToken = null;
     let totalFiles = 0;
     let uploadedFiles = 0;
+    let allSucceeded = true;
+    let uploading = false;
+
+    // --- Session persistence ---
+    function saveState() {
+        if (sessionToken) {
+            sessionStorage.setItem('crowdsky_upload', JSON.stringify({
+                sessionToken, totalFiles, uploadedFiles
+            }));
+        }
+    }
+
+    function clearState() {
+        sessionStorage.removeItem('crowdsky_upload');
+    }
+
+    async function restoreState() {
+        const saved = sessionStorage.getItem('crowdsky_upload');
+        if (!saved) return;
+
+        let state;
+        try { state = JSON.parse(saved); } catch { clearState(); return; }
+        if (!state.sessionToken) { clearState(); return; }
+
+        // Verify session is still valid on the server
+        try {
+            const resp = await fetch('upload.php?action=status&session_token=' + encodeURIComponent(state.sessionToken));
+            const data = await resp.json();
+
+            if (data.status === 'uploading') {
+                sessionToken = state.sessionToken;
+                totalFiles = state.totalFiles || 0;
+                uploadedFiles = data.file_count || 0;
+
+                // Restore UI
+                zone.style.display = 'none';
+                progressWrap.style.display = 'block';
+                listContainer.style.display = 'block';
+
+                // Rebuild file list from server data
+                list.innerHTML = '';
+                if (data.files) {
+                    data.files.forEach(f => {
+                        const li = document.createElement('li');
+                        const sizeMb = (f.file_size_bytes / 1024 / 1024).toFixed(2);
+                        const info = f.chunk_key || 'ok';
+                        li.innerHTML = '<span>' + escHtml(f.filename) + ' (' + sizeMb + ' MB)</span>' +
+                                       '<span class="file-status done">' + escHtml(info) + '</span>';
+                        list.appendChild(li);
+                    });
+                }
+
+                // Update progress
+                const pct = totalFiles > 0 ? Math.round((uploadedFiles / totalFiles) * 100) : 0;
+                progressFill.style.width = pct + '%';
+                progressText.textContent = uploadedFiles + ' / ' + totalFiles + ' files uploaded';
+
+                // Enable finalize if upload was complete
+                if (uploadedFiles >= totalFiles && totalFiles > 0) {
+                    enableFinalize();
+                }
+            } else if (data.status === 'complete' || data.status === 'not_found') {
+                clearState();
+            }
+        } catch {
+            // Server unreachable, keep the saved state for later
+        }
+    }
+
+    function enableFinalize() {
+        btnFinalize.disabled = false;
+        btnFinalize.classList.remove('btn-disabled');
+    }
+
+    // Restore on page load
+    restoreState();
+
+    // Warn before leaving during upload
+    window.addEventListener('beforeunload', e => {
+        if (uploading) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
 
     zone.addEventListener('click', () => input.click());
     zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
@@ -248,8 +380,16 @@ include __DIR__ . '/templates/header.php';
 
         totalFiles = fitFiles.length;
         uploadedFiles = 0;
+        allSucceeded = true;
+        uploading = true;
         progressWrap.style.display = 'block';
+        listContainer.style.display = 'block';
         zone.style.display = 'none';
+        list.innerHTML = '';
+
+        // Disable finalize during upload
+        btnFinalize.disabled = true;
+        btnFinalize.classList.add('btn-disabled');
 
         // Start session
         if (!sessionToken) {
@@ -260,10 +400,12 @@ include __DIR__ . '/templates/header.php';
             const data = await resp.json();
             if (data.error) {
                 alert('Error: ' + data.error);
+                uploading = false;
                 return;
             }
             sessionToken = data.session_token;
         }
+        saveState();
 
         // Upload files sequentially
         for (const file of fitFiles) {
@@ -284,6 +426,7 @@ include __DIR__ . '/templates/header.php';
                 if (data.error) {
                     statusEl.textContent = data.error;
                     statusEl.className = 'file-status error';
+                    allSucceeded = false;
                 } else {
                     const info = data.object ? data.object : (data.chunk_key || 'ok');
                     statusEl.textContent = info;
@@ -292,18 +435,28 @@ include __DIR__ . '/templates/header.php';
             } catch (err) {
                 statusEl.textContent = 'network error';
                 statusEl.className = 'file-status error';
+                allSucceeded = false;
             }
 
             uploadedFiles++;
             const pct = Math.round((uploadedFiles / totalFiles) * 100);
             progressFill.style.width = pct + '%';
             progressText.textContent = uploadedFiles + ' / ' + totalFiles + ' files uploaded';
+            saveState();
         }
 
-        actions.style.display = 'block';
+        uploading = false;
+
+        if (uploadedFiles === totalFiles && allSucceeded) {
+            enableFinalize();
+        }
     }
 
-    document.getElementById('btn-finalize').addEventListener('click', async () => {
+    btnFinalize.addEventListener('click', async () => {
+        if (btnFinalize.disabled) return;
+        btnFinalize.disabled = true;
+        btnFinalize.textContent = 'Finalizing...';
+
         const resp = await fetch('finalize.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -312,7 +465,10 @@ include __DIR__ . '/templates/header.php';
         const data = await resp.json();
         if (data.error) {
             alert('Error: ' + data.error);
+            btnFinalize.disabled = false;
+            btnFinalize.textContent = 'Finalize & Create Stacking Jobs';
         } else {
+            clearState();
             window.location.href = 'status.php?session=' + encodeURIComponent(sessionToken);
         }
     });
